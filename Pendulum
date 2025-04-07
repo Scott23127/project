@@ -1,0 +1,72 @@
+import numpy as np
+import sympy as smp
+import matplotlib.pyplot as plt
+from scipy.integrate import odeint
+
+the1, the2 = smp.symbols('the1 the2')
+t, g = smp.symbols('t g')
+m1, m2 = smp.symbols('m1 m2')
+l1, l2 = smp.symbols('l1 l2')
+P1, P2 = smp.symbols('P1 P2')
+Del = the1 - the2
+Mu = m1+m2
+Eta = l2*P1
+V = l1*P2
+Alpha = (l1*l2*(m1+m2*(smp.sin(Del)**2)))**-1
+Eps = Alpha*P1*P2*smp.sin(Del)
+Gam = (Alpha**2)*smp.sin(Del)*smp.cos(Del)*(m2*(Eta**2)+Mu*(V**2)-m2*Eta*V*smp.cos(Del))
+the1_d = (Alpha/l1)*(Eta-V*smp.cos(Del))
+the2_d = (Alpha/l2)*(Mu*V - m2*Eta*smp.cos(Del))
+P1_d = Gam - Eps - (Mu*l1*g*smp.sin(the1))
+P2_d = Eps - Gam - (m2*l2*g*smp.sin(the2))
+
+x1 = l1*smp.sin(the1)
+y1 = l1*smp.cos(the1)
+x2 = l1*smp.sin(the1) + l2*smp.sin(the2)
+y2 = l1*smp.cos(the1) + l2*smp.cos(the2)
+
+
+Eta_f = smp.lambdify([l2, P1], [Eta], 'numpy')
+V_f = smp.lambdify([l1, P2], [V], 'numpy')
+Alpha_f = smp.lambdify([l1, l2, m1, m2, the1, the2], [Alpha], 'numpy')
+Eps_f = smp.lambdify([P1, P2, the1, the2, l1, l2, m1, m2], Eps, 'numpy')
+Gam_f = smp.lambdify([m2, P1, P2, the1, the2, l1, l2, g], Gam, 'numpy')
+
+def dSdt (S, t, m1, m2, l1, l2, g):
+    (the1, the2, P1, P2) = S
+    
+    alpha = float(Alpha_f(l1, l2, m1, m2, the1, the2)[0])
+    v = float(V_f(l1, P2)[0])
+    eta = float(Eta_f(l2, P1)[0])
+    eps = float(Eps_f(P1, P2, the1, the2, l1, l2, m1, m2))
+    gam = (Gam_f(m2, P1, P2, the1, the2, l1, l2, g))
+    mu = float(m1 + m2)
+    del_int = float(the1 - the2)
+    
+    the1_d = (alpha/l1)*(eta-v*np.cos(del_int))
+    the2_d = (alpha/l2)*(mu*v - m2*eta*np.cos(del_int))
+    P1_d   = gam - eps- (mu*l1*g*np.sin(the1))
+    P2_d   = eps - gam - (m2*l2*g*np.sin(the2))
+    
+    
+    return [the1_d, the2_d, P1_d, P2_d]
+
+
+
+the1_0 = np.radians(30)
+the2_0 = np.radians(30)
+P1_0 = 2
+P2_0 = 4
+S_0 = [the1_0, the2_0, P1_0, P2_0]
+
+t = np.linspace(0, 1, 101)
+m1 = 1
+m2 = 1
+l1 = 1
+l2 = 1
+g = -9.81
+
+
+
+
+sol = odeint(dSdt, y0=S_0, t=t, args=(m1, m2, l1, l2, g))
